@@ -38,8 +38,6 @@ def check_win(board, mark) -> bool:
     return any(all(board[i] == mark for i in combo) for combo in WIN_COMBINATIONS)
 
 if TELEGRAM_AVAILABLE:
-    # ---- Bot command handlers (async for PTB v20+) ----
-
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(
             "Merhaba! Bir XoX oyunu oynamak için /play komutunu kullanın."
@@ -48,9 +46,7 @@ if TELEGRAM_AVAILABLE:
     async def play(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user_id = update.effective_user.id
         board = [" "] * 9
-        # Rastgele X veya O
         user_mark, bot_mark = random.choice([('X', 'O'), ('O', 'X')])
-        # X her zaman ilk hamleyi yapar
         next_turn = 'user' if user_mark == 'X' else 'bot'
         GAMES[user_id] = {
             'board': board,
@@ -58,7 +54,6 @@ if TELEGRAM_AVAILABLE:
             'bot_mark': bot_mark,
             'next_turn': next_turn
         }
-
         if next_turn == 'bot':
             avail = [i for i, v in enumerate(board) if v == " "]
             bot_idx = random.choice(avail)
@@ -76,16 +71,12 @@ if TELEGRAM_AVAILABLE:
                 InlineKeyboardButton(
                     board[j] if board[j] != " " else str(j + 1),
                     callback_data=str(j),
-                )
-                for j in range(i, i + 3)
+                ) for j in range(i, i + 3)
             ]
             keyboard.append(row)
-
         reply_markup = InlineKeyboardMarkup(keyboard)
         if update.callback_query:
-            await update.callback_query.edit_message_text(
-                text=text, reply_markup=reply_markup
-            )
+            await update.callback_query.edit_message_text(text=text, reply_markup=reply_markup)
         else:
             await update.message.reply_text(text, reply_markup=reply_markup)
 
@@ -96,17 +87,14 @@ if TELEGRAM_AVAILABLE:
         game = GAMES.get(user_id)
         if not game:
             return await query.edit_message_text("Önce /play ile oyunu başlatın.")
-
         board = game['board']
         user_mark = game['user_mark']
         bot_mark = game['bot_mark']
         if game['next_turn'] != 'user':
             return
-
         idx = int(query.data)
         if board[idx] != " ":
             return
-
         board[idx] = user_mark
         if check_win(board, user_mark):
             del GAMES[user_id]
@@ -114,30 +102,23 @@ if TELEGRAM_AVAILABLE:
         if " " not in board:
             del GAMES[user_id]
             return await query.edit_message_text("🤝 Berabere! 🤝")
-
         avail = [i for i, v in enumerate(board) if v == " "]
         bot_idx = random.choice(avail)
         board[bot_idx] = bot_mark
-
         if check_win(board, bot_mark):
             del GAMES[user_id]
             return await _send_board(update, context, board, "AĞLA KÖYLÜ")
         if " " not in board:
             del GAMES[user_id]
             return await _send_board(update, context, board, "🤝 Berabere! 🤝")
-
         game['next_turn'] = 'user'
         await _send_board(update, context, board, "🔄 Sıra sende.")
 
     def run_bot():
-        # Önce ortam değişkenine bak
         token = os.getenv("TELEGRAM_TOKEN")
         if not token:
-            # Kullanıcıdan prompt ile token al
-            token = input("Lütfen bot token’ınızı girin: ").strip()
-            if not token:
-                logger.error("Bot token’ı girilmedi. Çıkılıyor.")
-                sys.exit(1)
+            logger.error("Error: TELEGRAM_TOKEN ortam değişkeni ayarlı değil. Lütfen Railway Settings → Variables'a ekleyin.")
+            sys.exit(1)
         app = ApplicationBuilder().token(token).build()
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("play", play))
@@ -149,52 +130,35 @@ if TELEGRAM_AVAILABLE:
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         import unittest
-
         class TestWinLogic(unittest.TestCase):
             def test_empty(self):
                 self.assertFalse(check_win([" "] * 9, "X"))
                 self.assertFalse(check_win([" "] * 9, "O"))
-
             def test_top_row(self):
-                self.assertTrue(check_win(["X", "X", "X"] + [" "] * 6, "X"))
-
+                self.assertTrue(check_win(["X","X","X"]+ [" "]*6, "X"))
             def test_middle_row(self):
-                self.assertTrue(check_win([" "] * 3 + ["O", "O", "O"] + [" "] * 3, "O"))
-
+                self.assertTrue(check_win([" "]*3+["O","O","O"]+[" "]*3, "O"))
             def test_bottom_row(self):
-                self.assertTrue(check_win([" "] * 6 + ["X", "X", "X"], "X"))
-
+                self.assertTrue(check_win([" "]*6+["X","X","X"], "X"))
             def test_col_win(self):
-                self.assertTrue(check_win(["O", " ", " "] * 3, "O"))
-
+                self.assertTrue(check_win(["O"," "," "]*3, "O"))
             def test_diag_win(self):
-                self.assertTrue(check_win(["X", " ", " "] + [" ", "X", " "] + [" ", " ", "X"], "X"))
-                self.assertTrue(check_win([" ", " ", "O", " ", "O", " ", "O", " ", " "], "O"))
-
+                self.assertTrue(check_win(["X"," "," "]+[" ","X"," "]+[" "," ","X"], "X"))
+                self.assertTrue(check_win([" "," ","O"," ","O"," ","O"," "," "], "O"))
             def test_multiple_wins(self):
-                board = [
-                    "X", "X", "X",
-                    "X", "O", " ",
-                    "X", " ", "O",
-                ]
-                self.assertTrue(check_win(board, "X"))
-
+                board=["X","X","X","X","O"," ","X"," ","O"]
+                self.assertTrue(check_win(board,"X"))
             def test_invalid_mark(self):
-                board = ["Z"] * 9
-                self.assertFalse(check_win(board, "Z"))
-
+                board=["Z"]*9
+                self.assertFalse(check_win(board,"Z"))
             def test_no_false_positive(self):
-                board = ["X", "O", "X", "O", "X", "O", "O", "X", "O"]
-                self.assertFalse(check_win(board, "X"))
-                self.assertFalse(check_win(board, "O"))
-
+                board=["X","O","X","O","X","O","O","X","O"]
+                self.assertFalse(check_win(board,"X"))
+                self.assertFalse(check_win(board,"O"))
         unittest.main(argv=[sys.argv[0]])
     else:
         if not TELEGRAM_AVAILABLE:
-            print(
-                "Error: `python-telegram-bot` not installed.\n"
-                "Install with: pip install python-telegram-bot"
-            )
+            print("Error: `python-telegram-bot` not installed. Install with: pip install python-telegram-bot")
             return
         run_bot()
 
