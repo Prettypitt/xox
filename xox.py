@@ -131,10 +131,10 @@ if TELEGRAM_AVAILABLE:
 
     def run_bot():
         # Önce ortam değişkenine bak
-        token = os.getenv("7767671637:AAGaQ8Zph3rfkbVD1pn3zwgzv4tZzrTsfI0")
+        token = os.getenv("TELEGRAM_TOKEN")
         if not token:
             # Kullanıcıdan prompt ile token al
-            token = input("7767671637:AAGaQ8Zph3rfkbVD1pn3zwgzv4tZzrTsfI0: ").strip()
+            token = input("Lütfen bot token’ınızı girin: ").strip()
             if not token:
                 logger.error("Bot token’ı girilmedi. Çıkılıyor.")
                 sys.exit(1)
